@@ -1,0 +1,239 @@
+[gd_scene load_steps=5 format=3 uid="uid://d378m30iww3q4"]
+
+[ext_resource type="Script" path="res://scripts/core/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/grid/GridManager.gd" id="1_xabc"]
+[ext_resource type="Script" path="res://scripts/combat/EnemyManager.gd" id="2_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/CombatSystem.gd" id="3_combat"]
+[ext_resource type="Script" path="res://scripts/core/LevelManager.gd" id="4_level"]
+[ext_resource type="Script" path="res://scripts/core/ComboManager.gd" id="5_combo"]
+
+[node name="GameScene" type="Node"]
+script = ExtResource("1_main")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="SafeAreaMargin" type="MarginContainer" parent="UILayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainVBox" type="VBoxContainer" parent="UILayer/SafeAreaMargin"]
+layout_mode = 2
+
+[node name="TopGameplayArea" type="Control" parent="UILayer/SafeAreaMargin/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Background" type="ColorRect" parent="UILayer/SafeAreaMargin/MainVBox/TopGameplayArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.129412, 0.0823529, 0.129412, 1)
+
+[node name="Label" type="Label" parent="UILayer/SafeAreaMargin/MainVBox/TopGameplayArea"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "ZOMBIE SPAWN AREA"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="OrderButtonContainer" type="MarginContainer" parent="UILayer/SafeAreaMargin/MainVBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UILayer/SafeAreaMargin/MainVBox/OrderButtonContainer"]
+layout_mode = 2
+
+[node name="OrderButton" type="Button" parent="UILayer/SafeAreaMargin/MainVBox/OrderButtonContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 28
+text = "ORDER (10/10)"
+
+[node name="TrashCan" type="ColorRect" parent="UILayer/SafeAreaMargin/MainVBox/OrderButtonContainer/HBoxContainer" groups=["trash_can"]]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+color = Color(0.8, 0.1, 0.1, 1)
+
+[node name="Label" type="Label" parent="UILayer/SafeAreaMargin/MainVBox/OrderButtonContainer/HBoxContainer/TrashCan"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "TRASH"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BottomGridArea" type="MarginContainer" parent="UILayer/SafeAreaMargin/MainVBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="AspectRatioContainer" type="AspectRatioContainer" parent="UILayer/SafeAreaMargin/MainVBox/BottomGridArea"]
+layout_mode = 2
+stretch_mode = 0
+
+[node name="GridManager" type="GridContainer" parent="UILayer/SafeAreaMargin/MainVBox/BottomGridArea/AspectRatioContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 5
+script = ExtResource("1_xabc")
+
+[node name="GameOverPanel" type="Control" parent="UILayer"]
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="UILayer/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.8)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="UILayer/GameOverPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 48
+text = "GAME OVER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AdButton" type="Button" parent="UILayer/GameOverPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "AD: Wipe & Retry"
+
+[node name="CoinButton" type="Button" parent="UILayer/GameOverPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "COIN: Continue (-50)"
+
+[node name="GiveUpButton" type="Button" parent="UILayer/GameOverPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "GIVE UP"
+
+[node name="StaminaPanel" type="Control" parent="UILayer"]
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="UILayer/StaminaPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.8)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/StaminaPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="UILayer/StaminaPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "OUT OF STAMINA"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AdStaminaButton" type="Button" parent="UILayer/StaminaPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "AD: Recover + Bonus"
+
+[node name="CancelStaminaButton" type="Button" parent="UILayer/StaminaPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "CANCEL"
+
+[node name="LevelManager" type="Node" parent="." node_paths=PackedStringArray("enemy_manager", "uilayer")]
+script = ExtResource("4_level")
+enemy_manager = NodePath("../EnemyManager")
+uilayer = NodePath("../UILayer")
+
+[node name="ComboManager" type="Node" parent="."]
+script = ExtResource("5_combo")
+
+[node name="EnemyManager" type="Node" parent="." node_paths=PackedStringArray("spawn_area")]
+script = ExtResource("2_enemy")
+spawn_area = NodePath("../UILayer/SafeAreaMargin/MainVBox/TopGameplayArea")
+
+[node name="CombatSystem" type="Node" parent="." node_paths=PackedStringArray("grid_manager", "spawn_area")]
+script = ExtResource("3_combat")
+grid_manager = NodePath("../UILayer/SafeAreaMargin/MainVBox/BottomGridArea/AspectRatioContainer/GridManager")
+spawn_area = NodePath("../UILayer/SafeAreaMargin/MainVBox/TopGameplayArea")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(360, 640)
+anchor_mode = 1
