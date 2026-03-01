@@ -24,11 +24,18 @@ func _ready() -> void:
 		if coin_btn: coin_btn.pressed.connect(_on_coin_pressed)
 		if giveup_btn: giveup_btn.pressed.connect(_on_giveup_pressed)
 		
+	# シールドラベルの生成
+	_create_shield_label_if_missing()
+		
+	var sign_level = SaveDataManager.get_val("sign_upgrade_level")
+	if sign_level == null: sign_level = 0
+	max_stamina = 20 + sign_level
+	
 	# セーブデータの読み込み
 	if SaveDataManager.get_val("stamina") != null:
 		stamina = SaveDataManager.get_val("stamina")
 	else:
-		stamina = 20
+		stamina = max_stamina
 	
 	if stamina_panel:
 		stamina_panel.hide()
@@ -44,13 +51,12 @@ func _ready() -> void:
 	if grid_manager:
 		grid_manager.merged.connect(_on_item_merged)
 		
-	if enemy_manager:
-		enemy_manager.game_over.connect(trigger_game_over)
-		
 	if combo_manager:
 		combo_manager.combo_reached.connect(_on_combo_reached)
 
 func _on_item_merged(level: int) -> void:
+	if AudioManager: AudioManager.play_merge_sfx()
+	
 	# ComboManagerに通知
 	if combo_manager:
 		# 今回は画面中央付近を基準にするか、後でGridManagerから座標をもらうようにする
@@ -194,6 +200,7 @@ func trigger_merge_burst(pos: Vector2, level: int) -> void:
 				z.take_damage(damage)
 
 func _on_combo_reached(count: int, _pos: Vector2) -> void:
+	if AudioManager: AudioManager.play_combo_sfx()
 	shake_camera(count * 5.0, 0.3)
 
 func shake_camera(intensity: float, duration: float) -> void:
@@ -216,6 +223,24 @@ func trigger_game_over() -> void:
 	if game_over_panel:
 		game_over_panel.show()
 
+var shield_ui_label: Label = null
+
+func _create_shield_label_if_missing() -> void:
+	var hbox = get_node_or_null(^"UILayer/SafeAreaMargin/MainVBox/OrderButtonContainer/HBoxContainer")
+	if hbox and not shield_ui_label:
+		shield_ui_label = Label.new()
+		shield_ui_label.name = "ShieldLabel"
+		shield_ui_label.add_theme_font_size_override("font_size", 28)
+		shield_ui_label.add_theme_color_override("font_color", Color(0.2, 0.8, 1.0))
+		shield_ui_label.text = "SHIELD: ?/?"
+		shield_ui_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		shield_ui_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hbox.add_child(shield_ui_label)
+
+func update_shield_ui(current: int, max_val: int) -> void:
+	if shield_ui_label:
+		shield_ui_label.text = "SHIELD: %d/%d" % [current, max_val]
+
 func _on_ad_pressed() -> void:
 	print("--- AD WATCHED ---")
 	resume_game()
@@ -236,4 +261,141 @@ func resume_game() -> void:
 
 func _on_giveup_pressed() -> void:
 	get_tree().paused = false
-	get_tree().reload_current_scene()
+	if SceneManager:
+		SceneManager.change_scene("res://scenes/HomeScene.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/HomeScene.tscn")
+
+# -------------------------
+# DEBUG MENU
+# -------------------------
+var active_touches: Dictionary = {}
+var debug_menu_instance: Control = null
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touches[event.index] = event.position
+			if active_touches.size() >= 3 and debug_menu_instance == null:
+				var is_top_area = true
+				for pos in active_touches.values():
+					# 画面上部の300ピクセル以内か
+					if pos.y > 300:
+						is_top_area = false
+						break
+				if is_top_area:
+					show_debug_menu()
+		else:
+			active_touches.erase(event.index)
+
+func show_debug_menu() -> void:
+	var panel = PanelContainer.new()
+	debug_menu_instance = panel
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	var vbox = VBoxContainer.new()
+	panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "=== DEBUG MENU ==="
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+	
+	var btn_coin = Button.new()
+	btn_coin.text = "Add +100 Coins (Stamina as Coin)"
+	btn_coin.pressed.connect(func():
+		max_stamina += 100
+		stamina += 100
+		update_stamina_ui()
+		print("DEBUG: Added 100 max stamina/coins.")
+	)
+	vbox.add_child(btn_coin)
+	
+	var btn_skip = Button.new()
+	btn_skip.text = "Skip Stage"
+	btn_skip.pressed.connect(func():
+		var lm = get_tree().current_scene.get_node_or_null("LevelManager")
+		if lm:
+			# 強制クリア
+			print("DEBUG: Skipping Stage ", lm.current_stage)
+			lm.zombies_defeated = lm.zombies_to_spawn
+			lm.zombies_spawned = lm.zombies_to_spawn
+			lm.handle_stage_clear()
+	)
+	vbox.add_child(btn_skip)
+	
+	var btn_close = Button.new()
+	btn_close.text = "Close"
+	btn_close.pressed.connect(func():
+		panel.queue_free()
+		debug_menu_instance = null
+	)
+	vbox.add_child(btn_close)
+	
+	get_node("UILayer").add_child(panel)
+
+# -------------------------
+# RESULT DIALOG
+# -------------------------
+func show_result(stage: int) -> void:
+	get_tree().paused = true
+	var panel = PanelContainer.new()
+	panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	var vbox = VBoxContainer.new()
+	panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "STAGE %d CLEAR" % stage
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	vbox.add_child(title)
+	
+	var coins_reward = stage * 50
+	var reward_label = Label.new()
+	reward_label.text = "Reward: %d Coins" % coins_reward
+	reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reward_label.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(reward_label)
+	
+	var btn_ad = Button.new()
+	btn_ad.text = "Watch AD: Double Coins"
+	btn_ad.add_theme_font_size_override("font_size", 32)
+	btn_ad.add_theme_color_override("font_color", Color(1, 0.8, 0.2))
+	btn_ad.pressed.connect(func():
+		print("--- AD WATCHED (MOCK) ---")
+		print("Coins Doubled!")
+		_on_return_to_home_pressed(stage, coins_reward * 2)
+		panel.queue_free()
+	)
+	vbox.add_child(btn_ad)
+	
+	var btn_home = Button.new()
+	btn_home.text = "RETURN TO HOME"
+	btn_home.add_theme_font_size_override("font_size", 32)
+	btn_home.pressed.connect(func():
+		_on_return_to_home_pressed(stage, coins_reward)
+		panel.queue_free()
+	)
+	vbox.add_child(btn_home)
+	
+	var ui_layer = get_node("UILayer")
+	if ui_layer:
+		ui_layer.add_child(panel)
+
+func _on_return_to_home_pressed(stage: int, coins_reward: int) -> void:
+	# セーブ更新
+	var current_coins = SaveDataManager.get_val("coins")
+	if current_coins == null: current_coins = 0
+	SaveDataManager.set_val("coins", current_coins + coins_reward)
+	
+	# 次のステージへ
+	SaveDataManager.set_val("current_stage", stage + 1)
+	
+	# スタミナも保存
+	SaveDataManager.set_val("stamina", stamina)
+	
+	get_tree().paused = false
+	if SceneManager:
+		SceneManager.change_scene("res://scenes/HomeScene.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/HomeScene.tscn")

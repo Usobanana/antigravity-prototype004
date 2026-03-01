@@ -1,0 +1,159 @@
+[gd_scene format=3 uid="uid://d3x15d88fkhgj"]
+
+[ext_resource type="Script" path="res://scripts/ui/HomeScene.gd" id="1_x8km4"]
+
+[node name="HomeScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_x8km4")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopPanel" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 100)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/TopPanel"]
+layout_mode = 2
+alignment = 1
+
+[node name="CoinsLabel" type="Label" parent="VBoxContainer/TopPanel/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "COINS: 0"
+horizontal_alignment = 1
+
+[node name="StaminaLabel" type="Label" parent="VBoxContainer/TopPanel/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "STAMINA: 20/20"
+horizontal_alignment = 1
+
+[node name="ContentArea" type="ScrollContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="TabBox" type="HBoxContainer" parent="VBoxContainer/ContentArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="HomeTab" type="Control" parent="VBoxContainer/ContentArea/TabBox"]
+layout_mode = 2
+
+[node name="DeckTab" type="Control" parent="VBoxContainer/ContentArea/TabBox"]
+layout_mode = 2
+
+[node name="ShopTab" type="Control" parent="VBoxContainer/ContentArea/TabBox"]
+layout_mode = 2
+
+[node name="FightTab" type="Control" parent="VBoxContainer/ContentArea/TabBox"]
+layout_mode = 2
+
+[node name="ArenaLabel" type="Label" parent="VBoxContainer/ContentArea/TabBox/FightTab"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 100.0
+offset_bottom = 200.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 48
+text = "THE ARENA AWAITS"
+horizontal_alignment = 1
+
+[node name="StageLabel" type="Label" parent="VBoxContainer/ContentArea/TabBox/FightTab"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 36
+text = "CURRENT STAGE: 1"
+horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="VBoxContainer/ContentArea/TabBox/FightTab"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -120.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 48
+text = "START BATTLE"
+
+[node name="BottomNavBg" type="ColorRect" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+color = Color(1, 0.8, 0, 1)
+
+[node name="BottomNav" type="HBoxContainer" parent="VBoxContainer/BottomNavBg"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="NavHome" type="Button" parent="VBoxContainer/BottomNavBg/BottomNav"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 28
+text = "HOME"
+flat = true
+
+[node name="NavDeck" type="Button" parent="VBoxContainer/BottomNavBg/BottomNav"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 28
+text = "DECK"
+flat = true
+
+[node name="NavShop" type="Button" parent="VBoxContainer/BottomNavBg/BottomNav"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 28
+text = "SHOP"
+flat = true
+
+[node name="NavFight" type="Button" parent="VBoxContainer/BottomNavBg/BottomNav"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 28
+text = "FIGHT"
+flat = true

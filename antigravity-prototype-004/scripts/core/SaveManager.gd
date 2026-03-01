@@ -7,7 +7,14 @@ const SECRET_KEY = "MySuperSecretKey_ChangeThis_12345"
 var data: Dictionary = {
 	"coins": 0,
 	"top_stage": 1,
-	"stamina": 10
+	"stamina": 10,
+	"equipped_weapons": [1, 0, 0, 0, 0], # 0は空き枠
+	"weapon_inventory": {"1": 99, "5": 5}, # 所持している武器の種類と個数
+	"weapon_base_levels": {
+		"1": 1, "2": 1, "3": 1, "4": 1, "5": 1
+	},
+	"shield_level": 0, # 防弾チョッキのLv
+	"current_shield": 1 # 現在の残りシールド
 }
 
 func _ready() -> void:

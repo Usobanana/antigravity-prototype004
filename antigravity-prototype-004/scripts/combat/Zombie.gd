@@ -25,5 +25,13 @@ func take_damage(amount: int) -> void:
 	tw.tween_property(self, "modulate", Color.WHITE, 0.1)
 	
 	if hp <= 0:
+		if AudioManager:
+			AudioManager.play_zombie_death_sfx()
+		var particles_scene = load("res://scenes/effects/ZombieDeathParticles.tscn")
+		if particles_scene:
+			var p_instance = particles_scene.instantiate()
+			p_instance.global_position = global_position
+			get_tree().current_scene.add_child(p_instance)
+			
 		died.emit(self)
 		queue_free()

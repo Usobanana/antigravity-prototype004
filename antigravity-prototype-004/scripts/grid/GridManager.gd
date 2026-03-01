@@ -4,8 +4,8 @@ extends GridContainer
 signal merged(level: int)
 
 # グリッドサイズの設定
-const COLS: int = 5
-const ROWS: int = 5
+const COLS: int = 9
+const ROWS: int = 9
 const TOTAL_SLOTS: int = COLS * ROWS
 
 # アイテムのデータ構造
@@ -42,10 +42,11 @@ func _ready() -> void:
 		margin.add_theme_constant_override("margin_bottom", 4)
 		slot.add_child(margin)
 		
-		var bg = ColorRect.new()
+		var bg = TextureRect.new()
+		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bg.name = "ColorRect"
-		bg.color = Color(0.2, 0.2, 0.2, 0.8)
+		bg.name = "TextureRect"
 		margin.add_child(bg)
 		
 		var label = Label.new()
@@ -53,7 +54,7 @@ func _ready() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.name = "LevelLabel"
-		label.add_theme_font_size_override("font_size", 24)
+		label.add_theme_font_size_override("font_size", 16)
 		bg.add_child(label)
 		
 		add_child(slot)
@@ -65,14 +66,19 @@ func load_layout(layout_array: Array) -> void:
 		push_error("Invalid layout array size.")
 		return
 		
+	var equipped = SaveDataManager.get_val("equipped_weapons")
+	if equipped == null or equipped.is_empty():
+		equipped = [1, 2, 3, 4, 5]
+		
 	for i in range(TOTAL_SLOTS):
 		var val = layout_array[i]
 		if val == -1:
 			# 障害物
 			items[i] = {"level": -1}
 		elif val > 0:
-			# アイテム
-			items[i] = {"level": val}
+			# アイテム (ランダムなデッキ武器種にする)
+			var w_type = int(equipped.pick_random())
+			items[i] = {"type": w_type, "level": val}
 		else:
 			# 空
 			items[i] = null
@@ -90,15 +96,32 @@ func spawn_order(is_bonus: bool = false) -> bool:
 		
 	var target_idx = empty_slots.pick_random()
 	
-	var new_level = 1
-	if is_bonus:
-		# ボーナスタイム中は Lv.2 が 60%、Lv.3 が 40%
-		new_level = 2 if randf() < 0.6 else 3
-	else:
-		# 通常時は Lv.1 が 80%、Lv.2 が 20%
-		new_level = 1 if randf() < 0.8 else 2
+	# デッキからランダムな武器種を選ぶ
+	var equipped = SaveDataManager.get_val("equipped_weapons")
+	if typeof(equipped) != TYPE_ARRAY or equipped.size() < 5:
+		equipped = [1, 0, 0, 0, 0]
 		
-	spawn_item(target_idx, new_level)
+	var weapon_type = int(equipped.pick_random())
+	if weapon_type == 0:
+		weapon_type = 99 # 木製ボックス(空き枠ペナルティ)
+	
+	# Base Levelを取得
+	var base_levels = SaveDataManager.get_val("weapon_base_levels")
+	if typeof(base_levels) != TYPE_DICTIONARY:
+		base_levels = {"1": 1, "2": 1, "3": 1, "4": 1, "5": 1}
+	
+	var base_level = 1
+	if weapon_type != 99:
+		base_level = int(base_levels.get(str(weapon_type), 1))
+	
+	# 出現レベルは基本レベル
+	# ※ ここではボーナス時は「基本レベル＋1」が出るように調整
+	var actual_level = base_level
+	if is_bonus:
+		# ボーナスタイムはよりアップグレードされた武器が出やすい
+		actual_level = base_level + (1 if randf() < 0.5 else 2)
+		
+	spawn_item(target_idx, weapon_type, actual_level)
 	return true
 
 func _on_resized() -> void:
@@ -192,10 +215,10 @@ func drop_item(drop_slot_idx: int) -> void:
 				if main.has_method("play_b_movie_effect"):
 					main.play_b_movie_effect("cutin", get_global_mouse_position())
 			else:
-				if source_item.level == target_item.level:
-					# マージ成功
+				if source_item.get("type", 1) == target_item.get("type", 1) and source_item.level == target_item.level:
+					# マージ成功（種類とレベルが一致）
 					var new_level = target_item.level + 1
-					items[drop_slot_idx] = {"level": new_level, "cooldown": 0.0}
+					items[drop_slot_idx] = {"type": target_item.get("type", 1), "level": new_level, "cooldown": 0.0}
 					items[original_idx] = null
 					merged.emit(new_level)
 					
@@ -205,7 +228,7 @@ func drop_item(drop_slot_idx: int) -> void:
 						var drop_pos = get_child(drop_slot_idx).global_position + (get_child(drop_slot_idx).size / 2.0)
 						main.trigger_merge_burst(drop_pos, new_level)
 				else:
-					# レベルが違う場合は場所を入れ替え (両方に500msのクールダウン)
+					# 種類が違うかレベルが違う場合は場所を入れ替え (両方に500msのクールダウン)
 					source_item["cooldown"] = 0.5
 					target_item["cooldown"] = 0.5
 					
@@ -274,21 +297,33 @@ func _process(delta: float) -> void:
 
 # --- ヘルパー関数 ---
 
-func spawn_item(idx: int, level: int) -> void:
-	items[idx] = {"level": level}
+func spawn_item(idx: int, type: int, level: int) -> void:
+	items[idx] = {"type": type, "level": level}
 	update_slot_visual(idx, items[idx])
+
+func _get_weapon_texture(w_type: int) -> Texture2D:
+	match w_type:
+		1: return preload("res://assets/weapons/pistol.png")
+		2: return preload("res://assets/weapons/shotgun.png")
+		3: return preload("res://assets/weapons/chainsaw.png")
+		4: return preload("res://assets/weapons/shield.png")
+		5: return preload("res://assets/weapons/smg.png")
+		99: return preload("res://assets/weapons/wood_box.png")
+		_: return preload("res://icon.svg")
 
 func update_slot_visual(idx: int, item_data: Variant) -> void:
 	var slot_node = get_child(idx)
-	var label = slot_node.get_node(^"MarginContainer/ColorRect/LevelLabel") as Label
-	var bg = slot_node.get_node(^"MarginContainer/ColorRect") as ColorRect
+	if not slot_node.has_node(^"MarginContainer/TextureRect"): return
+	
+	var bg = slot_node.get_node(^"MarginContainer/TextureRect") as TextureRect
+	var label = bg.get_node(^"LevelLabel") as Label
 	
 	if item_data != null:
 		if item_data.get("level", 0) == -1: # 障害物
 			label.text = "X"
 			label.add_theme_color_override("font_color", Color.BLACK)
 			slot_node.modulate = Color(1.0, 1.0, 1.0, 1.0)
-			bg.color = Color(0.4, 0.4, 0.4, 1.0)
+			bg.texture = null
 		else: # 通常アイテム
 			label.text = "Lv." + str(item_data.level)
 			if label.has_theme_color_override("font_color"):
@@ -299,30 +334,46 @@ func update_slot_visual(idx: int, item_data: Variant) -> void:
 			else:
 				slot_node.modulate = Color(1.0, 1.0, 1.0, 1.0)
 			
-			# レベルごとに色を少し変える
-			var hue = fmod(item_data.level * 0.15, 1.0)
-			bg.color = Color.from_hsv(hue, 0.8, 0.6)
+			var weapon_type = item_data.get("type", 1)
+			bg.texture = _get_weapon_texture(weapon_type)
+			
+			if weapon_type != 99:
+				var hue = fmod((weapon_type - 1) * 0.15, 1.0)
+				bg.modulate = Color.from_hsv(hue, 0.4, 0.8 + (item_data.level * 0.05))
+			else:
+				bg.modulate = Color.WHITE
 	else:
 		label.text = ""
-		bg.color = Color(0.2, 0.2, 0.2, 0.5)
+		bg.texture = null
+		bg.modulate = Color.WHITE
 
 func create_visual_node(item_data: Dictionary) -> Control:
-	var visual = ColorRect.new()
+	var visual = TextureRect.new()
 	visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visual.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	visual.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	
 	var base_slot = get_child(0)
 	visual.size = base_slot.size
 	
-	var hue = fmod(item_data.level * 0.15, 1.0)
-	visual.color = Color.from_hsv(hue, 0.8, 0.6)
+	var weapon_type = item_data.get("type", 1)
+	visual.texture = _get_weapon_texture(weapon_type)
 	
+	if weapon_type != 99:
+		var hue = fmod((weapon_type - 1) * 0.15, 1.0)
+		visual.modulate = Color.from_hsv(hue, 0.4, 0.8 + (item_data.level * 0.05))
+		
 	var label = Label.new()
 	label.text = "Lv." + str(item_data.level)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
 	visual.add_child(label)
 	
 	# ドラッグ中であることを強調
-	visual.modulate = Color(1.2, 1.2, 1.2, 0.9)
+	visual.modulate = visual.modulate * Color(1.2, 1.2, 1.2, 0.9)
 	return visual

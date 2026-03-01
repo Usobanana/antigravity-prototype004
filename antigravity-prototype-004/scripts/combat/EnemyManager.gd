@@ -1,6 +1,5 @@
 extends Node
 
-signal game_over
 signal zombie_spawned
 signal zombie_defeated
 signal zombie_escaped
@@ -20,10 +19,13 @@ func _ready() -> void:
 var current_min_speed: float = 30.0
 var current_max_speed: float = 60.0
 
-func start_spawning(rate: float, min_speed: float, max_speed: float) -> void:
+var current_hp: int = 10
+
+func start_spawning(rate: float, min_speed: float, max_speed: float, hp: int = 10) -> void:
 	spawn_timer.wait_time = rate
 	current_min_speed = min_speed
 	current_max_speed = max_speed
+	current_hp = hp
 	spawn_timer.start()
 
 func stop_spawning() -> void:
@@ -57,7 +59,7 @@ func _on_spawn_timer_timeout() -> void:
 	spawn_area.add_child(zombie)
 	
 	zombie.speed = randf_range(current_min_speed, current_max_speed)
-	zombie.hp = 10
+	zombie.hp = current_hp
 	
 	var spawn_width = spawn_area.size.x
 	zombie.position.x = randf_range(40.0, spawn_width - 40.0)
@@ -72,7 +74,6 @@ func _on_spawn_timer_timeout() -> void:
 	zombie_spawned.emit()
 
 func _on_zombie_reached_bottom() -> void:
-	game_over.emit()
 	zombie_escaped.emit()
 
 func _on_zombie_died(zombie: Node) -> void:
