@@ -100,7 +100,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/h_separation = 2
 theme_override_constants/v_separation = 2
-columns = 9
+columns = 5
 script = ExtResource("1_xabc")
 
 [node name="GameOverPanel" type="Control" parent="UILayer"]

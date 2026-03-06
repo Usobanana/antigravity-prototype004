@@ -18,7 +18,7 @@ extends Control
 @onready var nav_shop = $VBoxContainer/BottomNavBg/BottomNav/NavShop
 @onready var nav_fight = $VBoxContainer/BottomNavBg/BottomNav/NavFight
 
-var repair_button: Button
+# Removed repair_button
 var buy_shield_button: Button
 var heroine_speech: Label
 
@@ -44,6 +44,7 @@ var selected_weapon_for_upgrade: int = -1
 
 var dragging_weapon_type: int = 0
 var drag_preview: TextureRect = null
+var shop_items_vbox: VBoxContainer
 
 func _ready() -> void:
 	content_area.get_h_scroll_bar().hide()
@@ -107,25 +108,7 @@ func _update_nav_buttons(index: int) -> void:
 		selected_btn.add_theme_stylebox_override("pressed", style)
 
 func _setup_diner_upgrades() -> void:
-	# HOMEタブに Repair 関連
-	var home_vbox = VBoxContainer.new()
-	home_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	home_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	home_vbox.add_theme_constant_override("separation", 20)
-	
-	var home_title = Label.new()
-	home_title.text = "- DINER UPGRADE -"
-	home_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	home_title.add_theme_font_size_override("font_size", 24)
-	home_vbox.add_child(home_title)
-	
-	repair_button = Button.new()
-	repair_button.custom_minimum_size = Vector2(240, 60)
-	repair_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	repair_button.add_theme_font_size_override("font_size", 24)
-	repair_button.pressed.connect(_on_repair_pressed)
-	home_vbox.add_child(repair_button)
-	home_tab.add_child(home_vbox)
+	# Removed DINER UPGRADE
 	
 	var shop_vbox = VBoxContainer.new()
 	shop_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -133,24 +116,16 @@ func _setup_diner_upgrades() -> void:
 	shop_vbox.add_theme_constant_override("separation", 10)
 	
 	var shop_title = Label.new()
-	shop_title.text = "- PREMIUM SHOP -"
+	shop_title.text = "- BLACK MARKET -"
 	shop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	shop_title.add_theme_font_size_override("font_size", 24)
 	shop_vbox.add_child(shop_title)
 	
-	var coin_pack_btn = Button.new()
-	coin_pack_btn.text = "Buy 1,000 Coins (Mock $0.99)"
-	coin_pack_btn.custom_minimum_size = Vector2(300, 60)
-	coin_pack_btn.add_theme_font_size_override("font_size", 20)
-	coin_pack_btn.pressed.connect(func(): _on_premium_buy_pressed("COIN_1000"))
-	shop_vbox.add_child(coin_pack_btn)
-	
-	var unlock_pack_btn = Button.new()
-	unlock_pack_btn.text = "Unlock RPG (Lv.7) (Mock $4.99)"
-	unlock_pack_btn.custom_minimum_size = Vector2(300, 60)
-	unlock_pack_btn.add_theme_font_size_override("font_size", 20)
-	unlock_pack_btn.pressed.connect(func(): _on_premium_buy_pressed("WEAPON_RPG"))
-	shop_vbox.add_child(unlock_pack_btn)
+	# We will dynamically populate this in update_ui, but let's create a container for the items
+	shop_items_vbox = VBoxContainer.new()
+	shop_items_vbox.add_theme_constant_override("separation", 15)
+	shop_items_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	shop_vbox.add_child(shop_items_vbox)
 	
 	shop_tab.add_child(shop_vbox)
 	
@@ -360,19 +335,7 @@ func update_ui() -> void:
 	var sign_level = SaveDataManager.get_val("sign_upgrade_level")
 	if sign_level == null: sign_level = 0
 	
-	if repair_button:
-		if sign_level >= 5: # 仮に最大レベル5
-			repair_button.text = "Sign +1 (MAX)"
-			repair_button.disabled = true
-			repair_button.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-		else:
-			repair_button.text = "Sign +1 (100C)"
-			repair_button.disabled = (coins < 100)
-			if coins >= 100:
-				repair_button.add_theme_color_override("font_color", Color(1, 0.8, 0.2))
-			else:
-				repair_button.add_theme_color_override("font_color", Color(0.8, 0.2, 0.2))
-	
+	# Removed repair_button logic
 	var total_max_stamina = 20 + sign_level
 	var stamina = SaveDataManager.get_val("stamina")
 	if stamina == null: stamina = total_max_stamina
@@ -381,11 +344,7 @@ func update_ui() -> void:
 	
 	stamina_label.text = "STAMINA: " + str(stamina) + "/" + str(total_max_stamina)
 	
-	var shield_level = SaveDataManager.get_val("shield_level")
-	if shield_level == null: shield_level = 0
-	
-	var max_shield = 1 + shield_level
-	if max_shield > 5: max_shield = 5 # hard cap at 5
+	var max_shield = 5
 	var current_shield = SaveDataManager.get_val("current_shield")
 	if current_shield == null: current_shield = max_shield
 	
@@ -416,42 +375,19 @@ func update_ui() -> void:
 				buy_shield_button.add_theme_color_override("font_color", Color(0.8, 0.2, 0.2))
 				
 	_update_weapon_deck_ui(coins)
+	_update_shop_ui(coins)
 	
 	var current_stage = SaveDataManager.get_val("current_stage")
 	if current_stage == null: current_stage = 1
 	stage_label.text = "CURRENT STAGE: " + str(current_stage)
 
-func _on_repair_pressed() -> void:
-	var coins = SaveDataManager.get_val("coins")
-	if coins == null: coins = 0
-	
-	var sign_level = SaveDataManager.get_val("sign_upgrade_level")
-	if sign_level == null: sign_level = 0
-	
-	if coins >= 100 and sign_level < 5:
-		coins -= 100
-		sign_level += 1
-		SaveDataManager.set_val("coins", coins)
-		SaveDataManager.set_val("sign_upgrade_level", sign_level)
-		
-		# アップグレードするとスタミナも全回復
-		SaveDataManager.set_val("stamina", 20 + sign_level)
-		
-		# SE再生
-		if AudioManager: AudioManager.play_merge_sfx()
-		
-		update_ui()
-		print("--- DINER UPGRADED ---")
+	# Removed _on_repair_pressed
 
 func _on_buy_shield_pressed() -> void:
 	var coins = SaveDataManager.get_val("coins")
 	if coins == null: coins = 0
 	
-	var shield_level = SaveDataManager.get_val("shield_level")
-	if shield_level == null: shield_level = 0
-	
-	var max_shield = 1 + shield_level
-	if max_shield > 5: max_shield = 5
+	var max_shield = 5
 	var current_shield = SaveDataManager.get_val("current_shield")
 	if current_shield == null: current_shield = max_shield
 	
@@ -469,26 +405,101 @@ func _on_buy_shield_pressed() -> void:
 		update_ui()
 		print("--- SHIELD RECHARGED +1 ---")
 
-func _on_premium_buy_pressed(item_id: String) -> void:
-	# 課金のモック処理
-	print("--- IN-APP PURCHASE MOCK: ", item_id, " ---")
+var shop_catalog = [
+	{"type": 2, "name": "Shotgun", "price": 500},
+	{"type": 3, "name": "Chainsaw", "price": 1000},
+	{"type": 4, "name": "Grenade", "price": 1500},
+	{"type": 5, "name": "SMG", "price": 800}
+]
+
+func _update_shop_ui(coins: int) -> void:
+	if not shop_items_vbox: return
 	
-	if item_id == "COIN_1000":
-		var coins = SaveDataManager.get_val("coins")
-		if coins == null: coins = 0
-		SaveDataManager.set_val("coins", coins + 1000)
-		_show_purchase_dialog("Purchased 1,000 Coins!")
+	for child in shop_items_vbox.get_children():
+		child.queue_free()
 		
-	elif item_id == "WEAPON_RPG":
-		var base_levels = SaveDataManager.get_val("weapon_base_levels")
-		if typeof(base_levels) != TYPE_DICTIONARY:
-			base_levels = {"1": 1, "2": 1, "3": 1, "4": 1, "5": 1}
-		# 仮にタイプ5をLv7まで一気にアンロックするとする
-		base_levels["5"] = max(base_levels.get("5", 1), 7)
-		SaveDataManager.set_val("weapon_base_levels", base_levels)
-		_show_purchase_dialog("RPG (Lv.7) Unlocked!")
+	var unlocked_weapons = SaveDataManager.get_val("unlocked_weapons", [1])
+	if typeof(unlocked_weapons) != TYPE_ARRAY: unlocked_weapons = [1]
+	
+	for item in shop_catalog:
+		var w_type = item["type"]
+		var w_name = item["name"]
+		var cost = item["price"]
 		
-	update_ui()
+		var is_unlocked = unlocked_weapons.has(w_type)
+		
+		var hbox = HBoxContainer.new()
+		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		hbox.add_theme_constant_override("separation", 20)
+		
+		var icon = TextureRect.new()
+		icon.custom_minimum_size = Vector2(64, 64)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture = _get_weapon_texture(w_type)
+		hbox.add_child(icon)
+		
+		var btn = Button.new()
+		btn.custom_minimum_size = Vector2(200, 60)
+		btn.add_theme_font_size_override("font_size", 20)
+		
+		if is_unlocked:
+			btn.text = w_name + "\n(OWNED)"
+			btn.disabled = true
+			var style = StyleBoxFlat.new()
+			style.bg_color = Color(0.2, 0.4, 0.2)
+			btn.add_theme_stylebox_override("disabled", style)
+			btn.add_theme_color_override("font_disabled_color", Color(0.7, 0.9, 0.7))
+		else:
+			btn.text = w_name + "\n" + str(cost) + " Coins"
+			btn.disabled = (coins < cost)
+			btn.pressed.connect(func(): _on_weapon_buy_pressed(w_type, cost, w_name))
+			if coins >= cost:
+				btn.add_theme_color_override("font_color", Color(1, 0.8, 0.2))
+			else:
+				btn.add_theme_color_override("font_color", Color(0.8, 0.2, 0.2))
+				
+		hbox.add_child(btn)
+		shop_items_vbox.add_child(hbox)
+
+func _on_weapon_buy_pressed(w_type: int, cost: int, w_name: String) -> void:
+	var coins = SaveDataManager.get_val("coins", 0)
+	if coins >= cost:
+		coins -= cost
+		SaveDataManager.set_val("coins", coins)
+		
+		var unlocked = SaveDataManager.get_val("unlocked_weapons", [1])
+		if typeof(unlocked) != TYPE_ARRAY: unlocked = [1]
+		if not unlocked.has(w_type):
+			unlocked.append(w_type)
+		SaveDataManager.set_val("unlocked_weapons", unlocked)
+		
+		var inv = SaveDataManager.get_val("weapon_inventory", {})
+		if typeof(inv) != TYPE_DICTIONARY: inv = {}
+		
+		# Give a starter stock of 5
+		inv[str(w_type)] = int(inv.get(str(w_type), 0)) + 5
+		SaveDataManager.set_val("weapon_inventory", inv)
+		
+		_play_buy_effect()
+		_show_purchase_dialog("Unlocked " + w_name + "!\nAdded 5 to Warehouse.")
+		update_ui()
+
+func _play_buy_effect() -> void:
+	if AudioManager and AudioManager.has_method("play_merge_sfx"):
+		AudioManager.play_merge_sfx()
+		
+	# Neon screen flash
+	var flash = ColorRect.new()
+	flash.color = Color(1.0, 0.8, 0.2, 0.8) # Yellow neon flash
+	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.z_index = 1000
+	get_tree().current_scene.add_child(flash)
+	
+	var tw = create_tween()
+	tw.tween_property(flash, "modulate:a", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(flash.queue_free)
 
 func _show_purchase_dialog(msg: String) -> void:
 	var panel = PanelContainer.new()
@@ -519,8 +530,14 @@ func _update_weapon_deck_ui(coins: int) -> void:
 	var inventory = SaveDataManager.get_val("weapon_inventory")
 	if typeof(inventory) != TYPE_DICTIONARY:
 		inventory = {"1": 99, "5": 5}
-	elif not inventory.has("5"):
-		inventory["5"] = 5
+	else:
+		var cleaned = {}
+		for k in inventory.keys():
+			var clean_k = str(int(str(k).to_float()))
+			cleaned[clean_k] = cleaned.get(clean_k, 0) + int(inventory[k])
+		inventory = cleaned
+		if not inventory.has("5"):
+			inventory["5"] = 5
 	SaveDataManager.set_val("weapon_inventory", inventory)
 		
 	var base_levels = SaveDataManager.get_val("weapon_base_levels")
@@ -544,8 +561,20 @@ func _update_weapon_deck_ui(coins: int) -> void:
 	for child in warehouse_grid.get_children():
 		child.queue_free()
 		
-	# Collect unique existing weapon types in inventory
-	var available_types = inventory.keys()
+	# Collect unique existing weapon types in inventory, ensure unlocked ones are included
+	var unlocked = SaveDataManager.get_val("unlocked_weapons", [1])
+	if typeof(unlocked) != TYPE_ARRAY: unlocked = [1]
+	
+	var available_types = []
+	for k in inventory.keys():
+		var w_str = str(int(str(k).to_float()))
+		if not available_types.has(w_str):
+			available_types.append(w_str)
+	for w in unlocked:
+		var w_str = str(int(w))
+		if not available_types.has(w_str):
+			available_types.append(w_str)
+			
 	available_types.sort() # Optional, sorts by string key but usually numerical
 	
 	for i in range(40):
@@ -558,10 +587,13 @@ func _update_weapon_deck_ui(coins: int) -> void:
 		# If we have an item for this slot...
 		if i < available_types.size():
 			var w_type_str = available_types[i]
-			var count = int(inventory[w_type_str])
+			var count = int(inventory.get(w_type_str, 0))
 			
-			if count > 0 or int(w_type_str) in equipped:
-				var w_type = int(w_type_str)
+			var w_type = int(w_type_str)
+			
+			# We show it if it's unlocked, or if it's equipped, or if count > 0
+			var is_unlocked = unlocked.has(w_type) or unlocked.has(float(w_type))
+			if count > 0 or w_type in equipped or is_unlocked:
 				
 				var slot = TextureRect.new()
 				slot.custom_minimum_size = Vector2(80, 80)
@@ -594,21 +626,8 @@ func _update_weapon_deck_ui(coins: int) -> void:
 		
 		warehouse_grid.add_child(panel)
 		
-	# Update Upgrade Panel
-	if selected_weapon_for_upgrade != -1:
-		upgrade_panel.show()
-		var b_level = int(base_levels.get(str(selected_weapon_for_upgrade), 1))
-		var cost = b_level * 50
-		var maxed = (b_level >= 7)
-		if maxed:
-			upgrade_weapon_label.text = "Type " + str(selected_weapon_for_upgrade) + " is MAX Level!"
-			upgrade_weapon_btn.text = "MAXED"
-			upgrade_weapon_btn.disabled = true
-		else:
-			upgrade_weapon_label.text = "Upgrade Type " + str(selected_weapon_for_upgrade) + " to Lv." + str(b_level + 1)
-			upgrade_weapon_btn.text = "UPGRADE (" + str(cost) + "C)"
-			upgrade_weapon_btn.disabled = (coins < cost)
-	else:
+	# Upgrade Panel is currently disabled
+	if upgrade_panel:
 		upgrade_panel.hide()
 
 func _on_warehouse_gui_input(event: InputEvent, w_type: int) -> void:
@@ -661,10 +680,6 @@ func _handle_drop(pos: Vector2) -> void:
 		var slot = equip_slots[i]
 		var panel = slot.get_parent() as Control
 		if panel.get_global_rect().has_point(pos):
-			if i == 0:
-				_dropped_on_slot = true
-				break # Slot 0 is locked
-			
 			var equipped = SaveDataManager.get_val("equipped_weapons")
 			if typeof(equipped) != TYPE_ARRAY or equipped.size() < 5:
 				equipped = [1, 0, 0, 0, 0]

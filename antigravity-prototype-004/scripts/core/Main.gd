@@ -13,6 +13,10 @@ var stamina_timer: float = 0.0
 const STAMINA_REGEN_TIME: float = 3.0 # 3秒で1回復
 var bonus_spawns_remaining: int = 0
 
+var shake_intensity: float = 0.0
+var shake_timer: float = 0.0
+@onready var ui_layer: CanvasLayer = $UILayer
+
 func _ready() -> void:
 	if game_over_panel:
 		game_over_panel.hide()
@@ -76,6 +80,14 @@ func _process(delta: float) -> void:
 			stamina += 1
 			SaveDataManager.set_val("stamina", stamina)
 			update_stamina_ui()
+			
+	if shake_timer > 0:
+		shake_timer -= delta
+		if ui_layer:
+			var rand_val = randf_range(-shake_intensity, shake_intensity)
+			ui_layer.offset = Vector2(rand_val, rand_val)
+		if shake_timer <= 0 and ui_layer:
+			ui_layer.offset = Vector2.ZERO
 
 func update_stamina_ui() -> void:
 	if order_btn:
@@ -114,6 +126,10 @@ func _on_cancel_stamina_pressed() -> void:
 	if stamina_panel: stamina_panel.hide()
 	get_tree().paused = false
 
+func shake_screen(intensity: float, duration: float) -> void:
+	shake_intensity = intensity
+	shake_timer = duration
+
 func play_b_movie_effect(effect_type: String, pos: Vector2) -> void:
 	if effect_type == "ketchup":
 		# シンプルなパーティクル生成
@@ -126,10 +142,19 @@ func play_b_movie_effect(effect_type: String, pos: Vector2) -> void:
 		cp.spread = 180.0
 		cp.gravity = Vector2(0, 400)
 		cp.initial_velocity_min = 150.0
-		cp.initial_velocity_max = 300.0
-		cp.scale_amount_min = 8.0
-		cp.scale_amount_max = 15.0
-		cp.color = Color(0.8, 0.05, 0.05)
+		cp.initial_velocity_max = 400.0
+		cp.scale_amount_min = 6.0
+		cp.scale_amount_max = 12.0
+		
+		# 王道のBlood RedからドギツイNeon Pink, Neon Greenなどをランダムに設定
+		var neon_colors = [
+			Color(1.0, 0.1, 0.8), # ネオンピンク
+			Color(0.2, 1.0, 0.2), # ネオングリーン
+			Color(0.0, 0.8, 1.0), # ネオンシアン
+			Color(1.0, 0.0, 0.0), # 通常の血
+			Color(1.0, 0.5, 0.0)  # オレンジ
+		]
+		cp.color = neon_colors[randi() % neon_colors.size()]
 		
 		add_child(cp)
 		cp.global_position = pos
@@ -337,12 +362,20 @@ func show_debug_menu() -> void:
 # RESULT DIALOG
 # -------------------------
 func show_result(stage: int) -> void:
-	get_tree().paused = true
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.5)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	
 	var panel = PanelContainer.new()
 	panel.process_mode = Node.PROCESS_MODE_ALWAYS
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	
 	var vbox = VBoxContainer.new()
 	panel.add_child(vbox)
+	center.add_child(panel)
+	bg.add_child(center)
 	
 	var title = Label.new()
 	title.text = "STAGE %d CLEAR" % stage
@@ -374,13 +407,22 @@ func show_result(stage: int) -> void:
 	btn_home.add_theme_font_size_override("font_size", 32)
 	btn_home.pressed.connect(func():
 		_on_return_to_home_pressed(stage, coins_reward)
-		panel.queue_free()
+		bg.queue_free()
 	)
 	vbox.add_child(btn_home)
 	
 	var ui_layer = get_node("UILayer")
 	if ui_layer:
-		ui_layer.add_child(panel)
+		ui_layer.add_child(bg)
+
+func disable_input() -> void:
+	var ui_layer = get_node("UILayer")
+	if ui_layer and not ui_layer.has_node("InputBlocker"):
+		var blocker = Control.new()
+		blocker.name = "InputBlocker"
+		blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+		ui_layer.add_child(blocker)
 
 func _on_return_to_home_pressed(stage: int, coins_reward: int) -> void:
 	# セーブ更新

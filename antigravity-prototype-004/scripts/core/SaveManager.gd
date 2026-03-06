@@ -14,7 +14,8 @@ var data: Dictionary = {
 		"1": 1, "2": 1, "3": 1, "4": 1, "5": 1
 	},
 	"shield_level": 0, # 防弾チョッキのLv
-	"current_shield": 1 # 現在の残りシールド
+	"current_shield": 1, # 現在の残りシールド
+	"unlocked_weapons": [1] # 新規追加：アンロック済み武器IDの配列(初期はピストルのみ)
 }
 
 func _ready() -> void:

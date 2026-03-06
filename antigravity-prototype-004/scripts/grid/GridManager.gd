@@ -4,8 +4,8 @@ extends GridContainer
 signal merged(level: int)
 
 # グリッドサイズの設定
-const COLS: int = 9
-const ROWS: int = 9
+const COLS: int = 5
+const ROWS: int = 5
 const TOTAL_SLOTS: int = COLS * ROWS
 
 # アイテムのデータ構造
@@ -19,6 +19,7 @@ var drag_touch_index: int = -1  # シングルタッチ用
 var dragged_visual: Control = null # ドラッグ中に指に追従する仮のUIノード
 
 func _ready() -> void:
+	columns = COLS
 	# VBoxContainer内で正方形の高さを強制確保するため、自身の幅(=画面幅)を最小高さに設定する
 	resized.connect(_on_resized)
 	
@@ -54,7 +55,7 @@ func _ready() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.name = "LevelLabel"
-		label.add_theme_font_size_override("font_size", 16)
+		label.add_theme_font_size_override("font_size", 28) # 大きくする
 		bg.add_child(label)
 		
 		add_child(slot)
@@ -210,10 +211,9 @@ func drop_item(drop_slot_idx: int) -> void:
 				items[drop_slot_idx] = source_item
 				items[original_idx] = null
 				
-				# SE/演出
-				var main = get_tree().current_scene
-				if main.has_method("play_b_movie_effect"):
-					main.play_b_movie_effect("cutin", get_global_mouse_position())
+				# SE/演出 (単なる移動)
+				if AudioManager and AudioManager.has_method("play_merge_sfx"):
+					AudioManager.play_merge_sfx()
 			else:
 				if source_item.get("type", 1) == target_item.get("type", 1) and source_item.level == target_item.level:
 					# マージ成功（種類とレベルが一致）
@@ -227,6 +227,9 @@ func drop_item(drop_slot_idx: int) -> void:
 					if main.has_method("trigger_merge_burst"):
 						var drop_pos = get_child(drop_slot_idx).global_position + (get_child(drop_slot_idx).size / 2.0)
 						main.trigger_merge_burst(drop_pos, new_level)
+						
+					if main.has_method("play_b_movie_effect"):
+						main.play_b_movie_effect("cutin", get_global_mouse_position())
 				else:
 					# 種類が違うかレベルが違う場合は場所を入れ替え (両方に500msのクールダウン)
 					source_item["cooldown"] = 0.5
@@ -235,10 +238,9 @@ func drop_item(drop_slot_idx: int) -> void:
 					items[drop_slot_idx] = source_item
 					items[original_idx] = target_item
 					
-					# SE/演出
-					var main = get_tree().current_scene
-					if main.has_method("play_b_movie_effect"):
-						main.play_b_movie_effect("cutin", get_global_mouse_position())
+					# SE/演出 (入れ替え)
+					if AudioManager and AudioManager.has_method("play_merge_sfx"):
+						AudioManager.play_merge_sfx()
 					
 			update_slot_visual(original_idx, items[original_idx])
 			update_slot_visual(drop_slot_idx, items[drop_slot_idx])

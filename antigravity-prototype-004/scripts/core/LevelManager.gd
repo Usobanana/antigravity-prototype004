@@ -22,6 +22,8 @@ var min_speed_cache: float = 0.0
 var max_speed_cache: float = 0.0
 var zombie_hp_cache: int = 10
 
+var is_stage_clearing: bool = false
+
 func _ready() -> void:
 	if not enemy_manager:
 		enemy_manager = get_tree().current_scene.get_node_or_null("EnemyManager")
@@ -81,45 +83,46 @@ func start_stage(stage: int) -> void:
 	current_stage = stage
 	zombies_spawned = 0
 	zombies_defeated = 0
+	is_stage_clearing = false
 	
-	# ステージごとの難易度調整
-	zombies_to_spawn = 5 + (stage * 2)
+	# ステージごとの難易度調整 (5x5用に低下)
+	zombies_to_spawn = 5 + int(stage * 1.5)
 	var spawn_rate = max(0.5, 2.0 - (stage * 0.2))
-	var min_speed = 30.0 + (stage * 5.0)
-	var max_speed = 60.0 + (stage * 10.0)
+	var min_speed = 20.0 + (stage * 3.0)
+	var max_speed = 45.0 + (stage * 5.0)
 	
 	var grid_manager = get_tree().current_scene.get_node_or_null("UILayer/SafeAreaMargin/MainVBox/BottomGridArea/AspectRatioContainer/GridManager")
 	if grid_manager and grid_manager.has_method("load_layout"):
 		var layout = []
-		layout.resize(81)
+		layout.resize(25)
 		layout.fill(0)
 		
-		# 基本ステージ定義(9x9想定で全体を拡張)
+		# 基本ステージ定義(5x5想定)
 		var obstacle_count = 0
 		var item_lv1_count = 0
 		var item_lv2_count = 0
 		
 		if stage == 1:
-			item_lv1_count = 5
-			obstacle_count = 2
+			item_lv1_count = 3
+			obstacle_count = 1
 		elif stage == 2:
-			item_lv1_count = 5
-			item_lv2_count = 2
-			obstacle_count = 4
+			item_lv1_count = 3
+			item_lv2_count = 1
+			obstacle_count = 2
 		else:
 			# Stage 3以降は数式に基づいて自動生成
-			obstacle_count = min(stage + 3, 20)
-			item_lv1_count = min(stage + 4, 15)
-			item_lv2_count = min(stage + 1, 10)
+			obstacle_count = min(stage + 1, 8)
+			item_lv1_count = min(stage + 2, 8)
+			item_lv2_count = min(stage, 5)
 			
 		for i in range(obstacle_count):
-			var idx = randi() % 81
+			var idx = randi() % 25
 			if layout[idx] == 0: layout[idx] = -1
 		for i in range(item_lv1_count):
-			var idx = randi() % 81
+			var idx = randi() % 25
 			if layout[idx] == 0: layout[idx] = 1
 		for i in range(item_lv2_count):
-			var idx = randi() % 81
+			var idx = randi() % 25
 			if layout[idx] == 0: layout[idx] = 2
 				
 		grid_manager.load_layout(layout)
@@ -132,10 +135,8 @@ func start_stage(stage: int) -> void:
 	max_speed_cache = max_speed
 	zombie_hp_cache = 10 + ((stage - 1) * 5)
 	
-	# シールド初期化 (Lvごとに+1)
-	var shield_level = SaveDataManager.get_val("shield_level")
-	if shield_level == null: shield_level = 0
-	max_shield = 1 + shield_level
+	# シールド初期化 (固定で5)
+	max_shield = 5
 	
 	var saved_shield = SaveDataManager.get_val("current_shield")
 	if saved_shield == null: saved_shield = max_shield
@@ -187,7 +188,7 @@ func _on_zombie_spawned() -> void:
 func _on_zombie_defeated() -> void:
 	zombies_defeated += 1
 	if zombies_spawned >= zombies_to_spawn and zombies_defeated >= zombies_to_spawn:
-		handle_stage_clear()
+		trigger_slowmo_stage_clear()
 
 func _on_zombie_escaped() -> void:
 	zombies_defeated += 1
@@ -208,7 +209,23 @@ func _on_zombie_escaped() -> void:
 			
 	# コンティニュー後などにウェーブが終了できるようにする
 	if current_shield > 0 and zombies_spawned >= zombies_to_spawn and zombies_defeated >= zombies_to_spawn:
-		handle_stage_clear()
+		trigger_slowmo_stage_clear()
+
+func trigger_slowmo_stage_clear() -> void:
+	if is_stage_clearing: return
+	is_stage_clearing = true
+	
+	var main_scene = get_tree().current_scene
+	if main_scene and main_scene.has_method("disable_input"):
+		main_scene.disable_input()
+		
+	Engine.time_scale = 0.2
+	
+	# 実時間で約1.0秒（ゲーム内時間0.2秒分）待機して余韻を作る
+	await get_tree().create_timer(1.0, true, false, true).timeout
+	
+	Engine.time_scale = 1.0
+	handle_stage_clear()
 
 func handle_stage_clear() -> void:
 	print("--- STAGE %d CLEAR ---" % current_stage)

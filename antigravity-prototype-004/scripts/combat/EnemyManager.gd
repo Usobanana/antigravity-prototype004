@@ -44,6 +44,7 @@ func _on_spawn_timer_timeout() -> void:
 	zombie.add_child(collision)
 	
 	var visual = ColorRect.new()
+	visual.name = "ColorRect"
 	visual.color = Color(0.2, 0.6, 0.2)
 	visual.size = Vector2(60, 60)
 	visual.position = Vector2(-30, -30)
@@ -58,8 +59,23 @@ func _on_spawn_timer_timeout() -> void:
 	
 	spawn_area.add_child(zombie)
 	
-	zombie.speed = randf_range(current_min_speed, current_max_speed)
-	zombie.hp = current_hp
+	var stage = SaveDataManager.get_val("current_stage")
+	if stage == null: stage = 1
+	
+	var z_type = 0 # NORMAL
+	var r = randf()
+	if stage >= 3:
+		if r < 0.15: z_type = 1 # TANK
+		elif r < 0.30: z_type = 2 # RUNNER
+	elif stage == 2:
+		if r < 0.15: z_type = 2 # RUNNER
+		
+	var base_speed = randf_range(current_min_speed, current_max_speed)
+	zombie.setup(z_type, current_hp, base_speed)
+	
+	if z_type == 1: label.text = "TANK"
+	elif z_type == 2: label.text = "RUNNER"
+	else: label.text = "Zombie"
 	
 	var spawn_width = spawn_area.size.x
 	zombie.position.x = randf_range(40.0, spawn_width - 40.0)
@@ -80,4 +96,9 @@ func _on_zombie_died(zombie: Node) -> void:
 	var main = get_tree().current_scene
 	if main.has_method("play_b_movie_effect"):
 		main.play_b_movie_effect("ketchup", zombie.global_position)
+	
+	var combo = main.get("combo_manager")
+	if combo and combo.has_method("register_kill"):
+		combo.register_kill(zombie.global_position)
+		
 	zombie_defeated.emit()
